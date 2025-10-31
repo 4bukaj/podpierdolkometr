@@ -51,7 +51,7 @@ app.event(
       );
 
       const res = await db.query(
-        `SELECT daily, retro, planning FROM scores WHERE "user" = $1`,
+        `SELECT score FROM scores WHERE "user" = $1`,
         [userId]
       );
       const points = res.rows[0];
