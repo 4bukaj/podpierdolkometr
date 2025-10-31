@@ -1,7 +1,13 @@
-import { App } from "@slack/bolt";
 import dotenv from "dotenv";
+import { App } from "@slack/bolt";
+import { Client } from "pg";
 
 dotenv.config();
+
+const db = new Client({
+  connectionString:
+    process.env.DATABASE_URL,
+});
 
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
@@ -11,7 +17,14 @@ const app = new App({
   appToken: process.env.SLACK_APP_TOKEN,
 });
 
-const scores = {}; // simple in-memory storage
+await db.connect();
+
+await db.query(`
+    CREATE TABLE IF NOT EXISTS scores (
+      user TEXT PRIMARY KEY,
+      score INT DEFAULT 0
+    )
+  `);
 
 app.event(
   "message",
@@ -27,12 +40,25 @@ app.event(
     if (match) {
       const userId = event.user;
 
-      scores[userId] =
-        (scores[userId] || 0) + 1;
+      await db.query(
+        `
+        INSERT INTO scores (user, score)
+        VALUES ($1, 1)
+        ON CONFLICT (user)
+        DO UPDATE SET score = scores.score + 1
+      `,
+        [userId]
+      );
+
+      const res = await db.query(
+        `SELECT daily, retro, planning FROM scores WHERE user = $1`,
+        [userId]
+      );
+      const points = res.rows[0];
 
       await client.chat.postMessage({
         channel: event.channel,
-        text: `Dziękujemy za donos. Masz już ${scores[userId]} punktów na swoim koncie.`,
+        text: `Dziękujemy za donos. Masz już ${points} punktów na swoim koncie.`,
       });
     }
   }
