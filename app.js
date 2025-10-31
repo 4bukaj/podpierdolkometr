@@ -4,6 +4,8 @@ import { Client } from "pg";
 
 dotenv.config();
 
+const port = process.env.PORT || 3000;
+
 const db = new Client({
   connectionString:
     process.env.DATABASE_URL,
@@ -13,8 +15,6 @@ const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
   signingSecret:
     process.env.SLACK_SIGNING_SECRET,
-  socketMode: true,
-  appToken: process.env.SLACK_APP_TOKEN,
 });
 
 await db.connect();
@@ -100,7 +100,7 @@ app.command(
 );
 
 (async () => {
-  await app.start();
+  await app.start(port);
   console.log(
     "Podpierdolkometr is running!"
   );
