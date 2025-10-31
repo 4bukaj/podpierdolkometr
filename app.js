@@ -64,9 +64,44 @@ app.event(
   }
 );
 
+app.command(
+  "/points",
+  async ({ ack, respond }) => {
+    await ack();
+
+    const result = await db.query(`
+      SELECT user, score
+      FROM scores
+      ORDER BY score DESC
+      LIMIT 10;
+    `);
+
+    if (result.rows.length === 0) {
+      await respond(
+        "Brak podpierdolek :("
+      );
+      return;
+    }
+
+    const leaderboard = result.rows
+      .map(
+        (r, i) =>
+          `${i + 1}. <@${r.user}> — *${
+            r.score
+          }* points`
+      )
+      .join("\n");
+
+    await respond({
+      text: `🏆 *Najlepsi donosiciele* 🏆\n${leaderboard}`,
+      response_type: "in_channel",
+    });
+  }
+);
+
 (async () => {
   await app.start();
   console.log(
-    "⚡️ DailyRanker app is running!"
+    "Podpierdolkometr is running!"
   );
 })();
