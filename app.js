@@ -39,36 +39,53 @@ app.event(
       /<@(\w+)>.*\b(daily|retro|planning)\b/i
     );
 
-    if (match) {
-      const userId = event.user;
-      console.log(match);
-      const addPoints =
-        `<@${userId}>` === match[0]
-          ? 10
-          : 5;
+    if (!match) return;
 
-      await db.query(
-        `
+    const msgDate = new Date(
+      parseFloat(event.ts) * 1000
+    );
+    const now = new Date();
+    const today946 = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      9,
+      46,
+      0
+    );
+
+    console.log(event);
+    console.log(now);
+    console.log(today946);
+
+    if (msgDate < today946) return;
+
+    const userId = event.user;
+
+    const addPoints =
+      match[1] === userId ? 10 : 5;
+
+    await db.query(
+      `
         INSERT INTO scores ("user", score)
         VALUES ($1, ${addPoints})
         ON CONFLICT ("user")
         DO UPDATE SET score = scores.score + ${addPoints}
       `,
-        [userId]
-      );
+      [userId]
+    );
 
-      const res = await db.query(
-        `SELECT score FROM scores WHERE "user" = $1`,
-        [userId]
-      );
-      const score =
-        res.rows[0]?.score || 0;
+    const res = await db.query(
+      `SELECT score FROM scores WHERE "user" = $1`,
+      [userId]
+    );
+    const score =
+      res.rows[0]?.score || 0;
 
-      await client.chat.postMessage({
-        channel: event.channel,
-        text: `Dziękujemy za donos. Masz już ${score} punktów na swoim koncie.`,
-      });
-    }
+    await client.chat.postMessage({
+      channel: event.channel,
+      text: `Dziękujemy za donos. Masz już ${score} punktów na swoim koncie.`,
+    });
   }
 );
 
