@@ -32,20 +32,27 @@ app.event(
     if (event.subtype === "bot_message")
       return;
 
-    const text = event.text ?? "";
+    const text = (
+      event.text ?? ""
+    ).trim();
     const match = text.match(
       /<@(\w+)>.*\b(daily|retro|planning)\b/i
     );
 
     if (match) {
       const userId = event.user;
+      console.log(match);
+      const addPoints =
+        `<@${userId}>` === match[0]
+          ? 10
+          : 5;
 
       await db.query(
         `
         INSERT INTO scores ("user", score)
-        VALUES ($1, 1)
+        VALUES ($1, ${addPoints})
         ON CONFLICT ("user")
-        DO UPDATE SET score = scores.score + 1
+        DO UPDATE SET score = scores.score + ${addPoints}
       `,
         [userId]
       );
@@ -54,11 +61,12 @@ app.event(
         `SELECT score FROM scores WHERE "user" = $1`,
         [userId]
       );
-      const points = res.rows[0];
+      const score =
+        res.rows[0]?.score || 0;
 
       await client.chat.postMessage({
         channel: event.channel,
-        text: `Dziękujemy za donos. Masz już ${points} punktów na swoim koncie.`,
+        text: `Dziękujemy za donos. Masz już ${score} punktów na swoim koncie.`,
       });
     }
   }
