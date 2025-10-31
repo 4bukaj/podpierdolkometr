@@ -21,7 +21,7 @@ await db.connect();
 
 await db.query(`
     CREATE TABLE IF NOT EXISTS scores (
-      user TEXT PRIMARY KEY,
+      "user" TEXT PRIMARY KEY,
       score INT DEFAULT 0
     )
   `);
@@ -42,16 +42,16 @@ app.event(
 
       await db.query(
         `
-        INSERT INTO scores (user, score)
+        INSERT INTO scores ("user", score)
         VALUES ($1, 1)
-        ON CONFLICT (user)
+        ON CONFLICT ("user")
         DO UPDATE SET score = scores.score + 1
       `,
         [userId]
       );
 
       const res = await db.query(
-        `SELECT daily, retro, planning FROM scores WHERE user = $1`,
+        `SELECT daily, retro, planning FROM scores WHERE "user" = $1`,
         [userId]
       );
       const points = res.rows[0];
@@ -70,7 +70,7 @@ app.command(
     await ack();
 
     const result = await db.query(`
-      SELECT user, score
+      SELECT "user", score
       FROM scores
       ORDER BY score DESC
       LIMIT 10;
