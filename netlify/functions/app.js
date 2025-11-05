@@ -7,7 +7,7 @@ import {
   addPoints,
   getAllUserPoints,
 } from "../../firebase.js";
-import { ENV_VALUES } from "../../env.js";
+import { ENV_VALUES } from "../../config.js";
 
 const { Client } = pkg;
 

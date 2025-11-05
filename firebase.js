@@ -1,5 +1,5 @@
 import admin from "firebase-admin";
-import { ENV_VALUES } from "./env.js";
+import { ENV_VALUES } from "./config.js";
 
 admin.initializeApp({
   credential: admin.credential.cert({
