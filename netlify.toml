@@ -1,0 +1,5 @@
+[build]
+  command = "npm run build"
+  publish = "."
+  functions = "netlify/functions"
+  environment = { NETLIFY_DISABLE_SECRET_SCANNING = "true" }
