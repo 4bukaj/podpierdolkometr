@@ -1,3 +1,4 @@
+import dotenv from "dotenv";
 import {
   App,
   ExpressReceiver,
@@ -6,7 +7,8 @@ import {
   addPoints,
   getAllUserPoints,
 } from "../../fb.js";
-import { ENV_VALUES } from "../../config.js";
+
+dotenv.config();
 
 const receiver = new ExpressReceiver({
   signingSecret:
@@ -14,7 +16,7 @@ const receiver = new ExpressReceiver({
 });
 
 const slackClient = new App({
-  token: ENV_VALUES.SLACK_BOT_TOKEN,
+  token: process.env.SLACK_BOT_TOKEN,
   receiver,
   // socketMode: true,
   // appToken: ENV_VALUES.SLACK_APP_TOKEN,
