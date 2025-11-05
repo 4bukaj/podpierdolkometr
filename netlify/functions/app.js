@@ -1,4 +1,3 @@
-import pkg from "pg";
 import {
   App,
   ExpressReceiver,
@@ -6,10 +5,8 @@ import {
 import {
   addPoints,
   getAllUserPoints,
-} from "../../firebase.js";
+} from "../../fb.js";
 import { ENV_VALUES } from "../../config.js";
-
-const { Client } = pkg;
 
 const receiver = new ExpressReceiver({
   signingSecret:
