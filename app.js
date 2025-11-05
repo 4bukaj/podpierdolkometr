@@ -1,32 +1,21 @@
-import dotenv from "dotenv";
 import { App } from "@slack/bolt";
-import { Client } from "pg";
+import {
+  addPoints,
+  getAllUserPoints,
+} from "./firebase.js";
+import { ENV_VALUES } from "./env.js";
 
-dotenv.config();
+const port = ENV_VALUES.PORT || 3000;
 
-const port = process.env.PORT || 3000;
-
-const db = new Client({
-  connectionString:
-    process.env.DATABASE_URL,
-});
-
-const app = new App({
-  token: process.env.SLACK_BOT_TOKEN,
+const slackClient = new App({
+  token: ENV_VALUES.SLACK_BOT_TOKEN,
   signingSecret:
-    process.env.SLACK_SIGNING_SECRET,
+    ENV_VALUES.SLACK_SIGNING_SECRET,
+  // socketMode: true,
+  // appToken: ENV_VALUES.SLACK_APP_TOKEN,
 });
 
-await db.connect();
-
-await db.query(`
-    CREATE TABLE IF NOT EXISTS scores (
-      "user" TEXT PRIMARY KEY,
-      score INT DEFAULT 0
-    )
-  `);
-
-app.event(
+slackClient.event(
   "message",
   async ({ event, client }) => {
     if (event.subtype === "bot_message")
@@ -35,97 +24,96 @@ app.event(
     const text = (
       event.text ?? ""
     ).trim();
+
     const match = text.match(
       /<@(\w+)>.*\b(daily|retro|planning)\b/i
     );
 
     if (!match) return;
 
-    const msgDate = new Date(
-      parseFloat(event.ts) * 1000
-    );
-    const now = new Date();
-    const today946 = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      9,
-      46,
-      0
-    );
+    // const msgDate = new Date(
+    //   parseFloat(event.ts) * 1000
+    // );
+    // const now = new Date();
+    // const today946 = new Date(
+    //   now.getFullYear(),
+    //   now.getMonth(),
+    //   now.getDate(),
+    //   9,
+    //   46,
+    //   0
+    // );
 
-    console.log(event);
-    console.log(now);
-    console.log(today946);
-
-    if (msgDate < today946) return;
+    // if (msgDate < today946) return;
 
     const userId = event.user;
+    const isSelfSnitching =
+      match[1] === userId;
+    const newPoints = isSelfSnitching
+      ? 10
+      : 5;
 
-    const addPoints =
-      match[1] === userId ? 10 : 5;
-
-    await db.query(
-      `
-        INSERT INTO scores ("user", score)
-        VALUES ($1, ${addPoints})
-        ON CONFLICT ("user")
-        DO UPDATE SET score = scores.score + ${addPoints}
-      `,
-      [userId]
-    );
-
-    const res = await db.query(
-      `SELECT score FROM scores WHERE "user" = $1`,
-      [userId]
-    );
-    const score =
-      res.rows[0]?.score || 0;
+    const updatedPoints =
+      await addPoints(
+        userId,
+        newPoints
+      );
 
     await client.chat.postMessage({
       channel: event.channel,
-      text: `Dziękujemy za donos. Masz już ${score} punktów na swoim koncie.`,
+      text: `${
+        isSelfSnitching
+          ? "Gratulacje! Samopodpierdolka jest podwójnie punktowana"
+          : "Dziękujemy za donos"
+      }. Masz już ${updatedPoints} punktów na swoim koncie.`,
     });
   }
 );
 
-app.command(
-  "/points",
-  async ({ ack, respond }) => {
-    await ack();
+slackClient.command(
+  "/podpierdolki",
+  async ({ command, ack, say }) => {
+    try {
+      await ack();
 
-    const result = await db.query(`
-      SELECT "user", score
-      FROM scores
-      ORDER BY score DESC
-      LIMIT 10;
-    `);
+      const points =
+        await getAllUserPoints();
 
-    if (result.rows.length === 0) {
-      await respond(
-        "Brak podpierdolek :("
+      if (!points.length) {
+        await say(
+          "Nie znaleziono donosów :("
+        );
+        return;
+      }
+
+      const sortedPoints = points.sort(
+        (a, b) => b.points - a.points
       );
-      return;
+      const text = sortedPoints
+        .slice(0, 3)
+        .map(
+          (user, index) =>
+            `${index + 1}. <@${
+              user.id
+            }> — *${
+              user.points
+            }* punktów`
+        )
+        .join("\n");
+
+      await say({
+        text: `*Ranking donosicieli:*\n${text}`,
+      });
+    } catch (error) {
+      await say(
+        "Przepraszamy, nie udało się pobrać punktów."
+      );
     }
-
-    const leaderboard = result.rows
-      .map(
-        (r, i) =>
-          `${i + 1}. <@${r.user}> — *${
-            r.score
-          }* points`
-      )
-      .join("\n");
-
-    await respond({
-      text: `🏆 *Najlepsi donosiciele* 🏆\n${leaderboard}`,
-      response_type: "in_channel",
-    });
   }
 );
 
 (async () => {
-  await app.start(port);
+  await slackClient.start(port);
   console.log(
     "Podpierdolkometr is running!"
   );
