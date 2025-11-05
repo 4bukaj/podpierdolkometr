@@ -1,16 +1,24 @@
-import { App } from "@slack/bolt";
+import pkg from "pg";
+import {
+  App,
+  ExpressReceiver,
+} from "@slack/bolt";
 import {
   addPoints,
   getAllUserPoints,
-} from "./firebase.js";
-import { ENV_VALUES } from "./env.js";
+} from "../../firebase.js";
+import { ENV_VALUES } from "../../env.js";
 
-const port = ENV_VALUES.PORT || 3000;
+const { Client } = pkg;
+
+const receiver = new ExpressReceiver({
+  signingSecret:
+    process.env.SLACK_SIGNING_SECRET,
+});
 
 const slackClient = new App({
   token: ENV_VALUES.SLACK_BOT_TOKEN,
-  signingSecret:
-    ENV_VALUES.SLACK_SIGNING_SECRET,
+  receiver,
   // socketMode: true,
   // appToken: ENV_VALUES.SLACK_APP_TOKEN,
 });
@@ -112,9 +120,4 @@ slackClient.command(
   }
 );
 
-(async () => {
-  await slackClient.start(port);
-  console.log(
-    "Podpierdolkometr is running!"
-  );
-})();
+export const handler = receiver.app;
