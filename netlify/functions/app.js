@@ -24,6 +24,7 @@ const slackClient = new App({
 slackClient.event(
   "message",
   async ({ event, client }) => {
+    console.log("new message");
     if (event.subtype === "bot_message")
       return;
 
@@ -118,25 +119,32 @@ slackClient.command(
   }
 );
 
-export async function handler(
-  event,
-  context
-) {
+export async function handler(event) {
   try {
-    let body = {};
-    try {
+    let body;
+
+    if (
+      event.headers["content-type"] &&
+      event.headers[
+        "content-type"
+      ].includes(
+        "application/x-www-form-urlencoded"
+      )
+    ) {
+      const querystring = await import(
+        "querystring"
+      );
+      body = querystring.parse(
+        event.body
+      );
+    } else {
       body = JSON.parse(
         event.body || "{}"
-      );
-    } catch (parseError) {
-      console.warn(
-        "Failed to parse body:",
-        parseError
       );
     }
 
     if (
-      body?.type === "url_verification"
+      body.type === "url_verification"
     ) {
       return {
         statusCode: 200,
@@ -153,10 +161,7 @@ export async function handler(
     const expressHandler = serverless(
       receiver.app
     );
-    return await expressHandler(
-      event,
-      context
-    );
+    return await expressHandler(event);
   } catch (err) {
     console.error(
       "Error in Slack handler:",
@@ -164,10 +169,6 @@ export async function handler(
     );
     return {
       statusCode: 500,
-      headers: {
-        "Content-Type":
-          "application/json",
-      },
       body: JSON.stringify({
         error: "Internal Server Error",
       }),
