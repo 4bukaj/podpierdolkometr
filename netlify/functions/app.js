@@ -1,3 +1,4 @@
+import serverless from "serverless-http";
 import {
   App,
   ExpressReceiver,
@@ -117,20 +118,40 @@ slackClient.command(
   }
 );
 
-receiver.app.post(
+const expressApp = receiver.app;
+
+expressApp.post(
   "/",
   async (req, res) => {
-    if (
-      req.body.type ===
-      "url_verification"
-    ) {
-      return res.status(200).send({
-        challenge: req.body.challenge,
-      });
-    }
+    try {
+      const body =
+        typeof req.body === "string"
+          ? JSON.parse(req.body)
+          : req.body;
 
-    return res.status(200).send();
+      if (
+        body?.type ===
+        "url_verification"
+      ) {
+        return res.status(200).send({
+          challenge: body.challenge,
+        });
+      }
+
+      res.status(200).send();
+    } catch (err) {
+      console.error(
+        "Verification error:",
+        err
+      );
+      res
+        .status(500)
+        .send(
+          "Error verifying Slack challenge"
+        );
+    }
   }
 );
 
-export const handler = receiver.app;
+export const handler =
+  serverless(expressApp);
