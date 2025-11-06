@@ -118,40 +118,59 @@ slackClient.command(
   }
 );
 
-const expressApp = receiver.app;
-
-expressApp.post(
-  "/",
-  async (req, res) => {
+export async function handler(
+  event,
+  context
+) {
+  try {
+    let body = {};
     try {
-      const body =
-        typeof req.body === "string"
-          ? JSON.parse(req.body)
-          : req.body;
-
-      if (
-        body?.type ===
-        "url_verification"
-      ) {
-        return res.status(200).send({
-          challenge: body.challenge,
-        });
-      }
-
-      res.status(200).send();
-    } catch (err) {
-      console.error(
-        "Verification error:",
-        err
+      body = JSON.parse(
+        event.body || "{}"
       );
-      res
-        .status(500)
-        .send(
-          "Error verifying Slack challenge"
-        );
+    } catch (parseError) {
+      console.warn(
+        "Failed to parse body:",
+        parseError
+      );
     }
-  }
-);
 
-export const handler =
-  serverless(expressApp);
+    if (
+      body?.type === "url_verification"
+    ) {
+      return {
+        statusCode: 200,
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          challenge: body.challenge,
+        }),
+      };
+    }
+
+    const expressHandler = serverless(
+      receiver.app
+    );
+    return await expressHandler(
+      event,
+      context
+    );
+  } catch (err) {
+    console.error(
+      "Error in Slack handler:",
+      err
+    );
+    return {
+      statusCode: 500,
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+      body: JSON.stringify({
+        error: "Internal Server Error",
+      }),
+    };
+  }
+}
