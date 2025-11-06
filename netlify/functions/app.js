@@ -111,24 +111,42 @@ expressApp.use((req, res, next) => {
   next();
 });
 
-expressApp.post("/", (req, res) => {
-  if (
-    req.body?.type ===
-    "url_verification"
-  ) {
-    console.log(
-      "✅ Responding with challenge:",
-      req.body.challenge
-    );
-    return res
-      .status(200)
-      .json({
-        challenge: req.body.challenge,
-      });
-  }
+expressApp.post(
+  "/",
+  async (req, res, next) => {
+    try {
+      if (
+        req.body?.type ===
+        "url_verification"
+      ) {
+        console.log(
+          "✅ Responding with challenge:",
+          req.body.challenge
+        );
+        return res.status(200).json({
+          challenge: req.body.challenge,
+        });
+      }
 
-  return receiver.app(req, res);
-});
+      console.log(
+        "⚙️ Passing to Slack Bolt app"
+      );
+      return receiver.app(
+        req,
+        res,
+        next
+      );
+    } catch (err) {
+      console.error(
+        "❌ Error in main handler:",
+        err
+      );
+      return res
+        .status(500)
+        .send("Internal Server Error");
+    }
+  }
+);
 
 export const handler =
   serverless(expressApp);
