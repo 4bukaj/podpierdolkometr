@@ -120,14 +120,13 @@ expressApp.post("/", (req, res) => {
       "✅ Responding with challenge:",
       req.body.challenge
     );
-    return res.status(200).json({
-      challenge: req.body.challenge,
-    });
+    return res
+      .status(200)
+      .json({
+        challenge: req.body.challenge,
+      });
   }
 
-  console.log(
-    "⚙️ Passing to Slack Bolt app"
-  );
   return receiver.app(req, res);
 });
 
