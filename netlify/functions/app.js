@@ -112,7 +112,7 @@ expressApp.use((req, res, next) => {
 });
 
 expressApp.post(
-  "*",
+  "/.*/",
   async (req, res, next) => {
     try {
       console.log(
