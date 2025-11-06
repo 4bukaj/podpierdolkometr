@@ -93,31 +93,43 @@ slackClient.command(
 
 const expressApp = express();
 
+expressApp.use(bodyParser.json());
 expressApp.use(
   bodyParser.urlencoded({
     extended: true,
   })
 );
-expressApp.use(bodyParser.json());
 
-expressApp.post(
-  "/slack/events",
-  (req, res) => {
-    if (
-      req.body &&
-      req.body.type ===
-        "url_verification"
-    ) {
-      return res.status(200).json({
-        challenge: req.body.challenge,
-      });
-    }
+expressApp.use((req, res, next) => {
+  console.log(
+    "📥 Incoming:",
+    req.method,
+    req.url,
+    req.headers["content-type"]
+  );
+  console.log("Body:", req.body);
+  next();
+});
 
-    return receiver.app(req, res);
+expressApp.post("/", (req, res) => {
+  if (
+    req.body?.type ===
+    "url_verification"
+  ) {
+    console.log(
+      "✅ Responding with challenge:",
+      req.body.challenge
+    );
+    return res.status(200).json({
+      challenge: req.body.challenge,
+    });
   }
-);
 
-expressApp.use("/", receiver.app);
+  console.log(
+    "⚙️ Passing to Slack Bolt app"
+  );
+  return receiver.app(req, res);
+});
 
 export const handler =
   serverless(expressApp);
