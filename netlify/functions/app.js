@@ -11,9 +11,18 @@ import {
 } from "../../fb.js";
 import { ENV_VALUES } from "../../config.js";
 
+// --- Create a custom receiver that disables body parsing ---
+const expressApp = express();
+
+expressApp.use(
+  express.raw({ type: "*/*" }) // keep body raw for Slack signature verification
+);
+
 const receiver = new ExpressReceiver({
   signingSecret:
     ENV_VALUES.SLACK_SIGNING_SECRET,
+  processBeforeResponse: true,
+  app: expressApp,
 });
 
 const slackClient = new App({
@@ -21,6 +30,7 @@ const slackClient = new App({
   receiver,
 });
 
+// --- SLACK EVENTS ---
 slackClient.event(
   "message",
   async ({ event, client }) => {
@@ -58,9 +68,13 @@ slackClient.event(
   }
 );
 
+// --- SLASH COMMAND ---
 slackClient.command(
   "/podpierdolki",
   async ({ ack, say }) => {
+    console.log(
+      "⚡ Slash command triggered"
+    );
     await ack();
 
     const points =
@@ -91,50 +105,40 @@ slackClient.command(
   }
 );
 
-const expressApp = express();
-expressApp.use(bodyParser.json());
-expressApp.use(
-  bodyParser.urlencoded({
-    extended: true,
-  })
-);
-
-expressApp.use((req, res, next) => {
-  console.log(
-    "📥 Incoming:",
-    req.method,
-    req.url
-  );
-  console.log("Body:", req.body);
-  next();
-});
-
+// --- Express endpoints ---
 expressApp.post(
   "/.netlify/functions/app",
   (req, res, next) => {
+    // Slack URL verification
     if (
       req.body?.type ===
       "url_verification"
     ) {
+      const challenge = JSON.parse(
+        req.body.toString()
+      ).challenge;
       console.log(
         "✅ Responding with challenge:",
-        req.body.challenge
+        challenge
       );
-      return res.status(200).json({
-        challenge: req.body.challenge,
-      });
+      return res
+        .status(200)
+        .json({ challenge });
     }
+
     console.log(
-      "⚙️ Passing to Slack Bolt internal Express app"
+      "⚙️ Passing to Slack Bolt app"
     );
     return receiver.app(req, res, next);
   }
 );
 
+// Mount Bolt internal app
 expressApp.use(
   "/.netlify/functions/app",
   receiver.app
 );
 
+// Export Netlify handler
 export const handler =
   serverless(expressApp);
