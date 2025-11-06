@@ -104,13 +104,15 @@ expressApp.post(
   "/slack/events",
   (req, res) => {
     if (
+      req.body &&
       req.body.type ===
-      "url_verification"
+        "url_verification"
     ) {
-      return res
-        .status(200)
-        .send(req.body.challenge);
+      return res.status(200).json({
+        challenge: req.body.challenge,
+      });
     }
+
     return receiver.app(req, res);
   }
 );
