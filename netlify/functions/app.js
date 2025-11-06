@@ -112,7 +112,7 @@ expressApp.use((req, res, next) => {
 });
 
 expressApp.post(
-  "/.*/",
+  "/.netlify/functions/app",
   async (req, res, next) => {
     try {
       console.log(
