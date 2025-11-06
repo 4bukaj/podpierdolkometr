@@ -92,7 +92,6 @@ slackClient.command(
 );
 
 const expressApp = express();
-
 expressApp.use(bodyParser.json());
 expressApp.use(
   bodyParser.urlencoded({
@@ -104,8 +103,7 @@ expressApp.use((req, res, next) => {
   console.log(
     "📥 Incoming:",
     req.method,
-    req.url,
-    req.headers["content-type"]
+    req.url
   );
   console.log("Body:", req.body);
   next();
@@ -113,44 +111,29 @@ expressApp.use((req, res, next) => {
 
 expressApp.post(
   "/.netlify/functions/app",
-  async (req, res, next) => {
-    try {
+  (req, res, next) => {
+    if (
+      req.body?.type ===
+      "url_verification"
+    ) {
       console.log(
-        "📥 Incoming Slack event:",
-        req.body
+        "✅ Responding with challenge:",
+        req.body.challenge
       );
-
-      if (
-        req.body?.type ===
-        "url_verification"
-      ) {
-        console.log(
-          "✅ Responding with challenge:",
-          req.body.challenge
-        );
-        return res.status(200).json({
-          challenge: req.body.challenge,
-        });
-      }
-
-      console.log(
-        "⚙️ Passing to Slack Bolt app"
-      );
-      return receiver.app(
-        req,
-        res,
-        next
-      );
-    } catch (err) {
-      console.error(
-        "❌ Error in main handler:",
-        err
-      );
-      return res
-        .status(500)
-        .send("Internal Server Error");
+      return res.status(200).json({
+        challenge: req.body.challenge,
+      });
     }
+    console.log(
+      "⚙️ Passing to Slack Bolt internal Express app"
+    );
+    return receiver.app(req, res, next);
   }
+);
+
+expressApp.use(
+  "/.netlify/functions/app",
+  receiver.app
 );
 
 export const handler =
