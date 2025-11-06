@@ -1,7 +1,5 @@
 import admin from "firebase-admin";
-import dotenv from "dotenv";
-
-dotenv.config();
+import { ENV_VALUES } from "./config.js";
 
 admin.initializeApp({
   credential: admin.credential.cert({

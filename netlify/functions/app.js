@@ -1,4 +1,3 @@
-import dotenv from "dotenv";
 import {
   App,
   ExpressReceiver,
@@ -7,16 +6,15 @@ import {
   addPoints,
   getAllUserPoints,
 } from "../../fb.js";
-
-dotenv.config();
+import { ENV_VALUES } from "../../config.js";
 
 const receiver = new ExpressReceiver({
   signingSecret:
-    process.env.SLACK_SIGNING_SECRET,
+    ENV_VALUES.SLACK_SIGNING_SECRET,
 });
 
 const slackClient = new App({
-  token: process.env.SLACK_BOT_TOKEN,
+  token: ENV_VALUES.SLACK_BOT_TOKEN,
   receiver,
   // socketMode: true,
   // appToken: ENV_VALUES.SLACK_APP_TOKEN,
@@ -116,6 +114,22 @@ slackClient.command(
         "Przepraszamy, nie udało się pobrać punktów."
       );
     }
+  }
+);
+
+receiver.app.post(
+  "/",
+  async (req, res) => {
+    if (
+      req.body.type ===
+      "url_verification"
+    ) {
+      return res.status(200).send({
+        challenge: req.body.challenge,
+      });
+    }
+
+    return res.status(200).send();
   }
 );
 
