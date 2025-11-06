@@ -112,9 +112,14 @@ expressApp.use((req, res, next) => {
 });
 
 expressApp.post(
-  "/",
+  "*",
   async (req, res, next) => {
     try {
+      console.log(
+        "📥 Incoming Slack event:",
+        req.body
+      );
+
       if (
         req.body?.type ===
         "url_verification"
